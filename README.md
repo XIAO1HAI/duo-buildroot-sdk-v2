@@ -1,6 +1,7 @@
 # Milk-V Duo series buildroot SDK V2
-
+# buildroot手册
 1、基于milkvtech/milkv-duo的duodocker镜像【推荐第一种方法】
+
 运行docker
 ```
 docker run -itd --name duodocker -v $(pwd):/home/work milkvtech/milkv-duo:latest /bin/bash
@@ -12,6 +13,7 @@ ln -s /usr/bin/python3.10 /usr/bin/python
 此步之后可以跳过第2步，直接进行第3步
 
 2、安装相关依赖包（基于sophg/tpuc_dev的docker情况下）
+
 安装sophgo/tpuc_dev docker
 ```
 docker run -v $PWD/..:/workspace -p 8001:8001 -it --name myname sophgo/tpuc_dev:v3.1
