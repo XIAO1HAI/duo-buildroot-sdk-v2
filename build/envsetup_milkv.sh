@@ -348,6 +348,7 @@ function build_sdk()
   if [[ "$CHIP_ARCH" != CV180X ]] && [[ "$1" = ai ]]; then
     mkdir -p "$SYSTEM_OUT_DIR"/usr/bin/"$1"
     cp -a "$SDK_INSTALL_PATH"/bin/sample_* "$SYSTEM_OUT_DIR"/usr/bin/"$1"
+    cp -a "${SDK_INSTALL_PATH}/sample/3rd/rtsp/lib/libcvi_rtsp.so" "$SYSTEM_OUT_DIR"/lib/
   fi
 }
 
@@ -517,7 +518,7 @@ function clean_pqtool_server()
 function build_3rd_party()
 {
   mkdir -p "$OSS_TARBALL_PATH"
- 
+
   if [ -d "${OSS_PATH}/oss_release_tarball" ]; then
     echo "oss prebuilt tarball found!"
   else
@@ -527,7 +528,7 @@ function build_3rd_party()
   fi
   echo "cp -rpf ${OSS_PATH}/oss_release_tarball/${SDK_VER}/*  ${OSS_TARBALL_PATH}"
   cp -rpf ${OSS_PATH}/oss_release_tarball/${SDK_VER}/*  ${OSS_TARBALL_PATH}
- 
+
   local oss_list=(
     "zlib"
     "glog"
@@ -546,7 +547,7 @@ function build_3rd_party()
     "cvi-json-c"
     "cvi-miniz"
   )
- 
+
   for name in "${oss_list[@]}"
   do
     if [ -f "${OSS_TARBALL_PATH}/${name}.tar.gz" ]; then
@@ -597,6 +598,9 @@ function build_all()
   build_middleware || return $?
   if [ "$TPU_REL" = 1 ]; then
     build_tpu_sdk || return $?
+    build_ive_sdk || return $?
+    build_ivs_sdk || return $?
+    build_ai_sdk  || return $?
   fi
   pack_cfg || return $?
   pack_rootfs || return $?
@@ -739,14 +743,14 @@ function cvi_setup_env()
   OSS_PATH="$TOP_DIR"/oss
   OPENCV_PATH="$TOP_DIR"/opencv
   APPS_PATH="$TOP_DIR"/apps
-  MW_PATH="$TOP_DIR"/middleware/"$MW_VER"
+  MW_PATH="$TOP_DIR"/cvi_mpi
   PQTOOL_SERVER_PATH="$MW_PATH"/modules/isp/"${CHIP_ARCH,,}"/isp-tool-daemon/isp_daemon_tool
   ISP_TUNING_PATH="$TOP_DIR"/isp_tuning
   TPU_SDK_PATH="$TOP_DIR"/cviruntime
   IVE_SDK_PATH="$TOP_DIR"/ive
   IVS_SDK_PATH="$TOP_DIR"/ivs
   CNV_SDK_PATH="$TOP_DIR"/cnv
-  AI_SDK_PATH="$TOP_DIR"/cviai
+  AI_SDK_PATH="$TOP_DIR"/tdl_sdk
   CVI_PIPELINE_PATH="$TOP_DIR"/cvi_pipeline
   CVI_RTSP_PATH="$TOP_DIR"/cvi_rtsp
   OPENSBI_PATH="$TOP_DIR"/opensbi
@@ -867,12 +871,25 @@ function cvi_setup_env()
     print_error "No MV_VENDOR specified!"
     return 1
   fi
+
+  if [[ ${MV_BOARD} == *"-duo-"* ]]; then
+    MV_BOARD_TYPE="duo"
+  elif [[ ${MV_BOARD} == *"-duo256m-"* ]]; then
+    MV_BOARD_TYPE="duo256m"
+  elif [[ ${MV_BOARD} == *"-duos-"* ]]; then
+    MV_BOARD_TYPE="duos"
+  else
+    print_error "Unknown MV_BOARD_TYPE!"
+    return 1
+  fi
+
   export BR_DIR="$TOP_DIR"/buildroot-2024.02
   export BR_BOARD=${MV_BOARD}
   export BR_OVERLAY_DIR=${BR_DIR}/board/${MV_VENDOR}/${MV_BOARD}/overlay
   export BR_DEFCONFIG=${BR_BOARD}_defconfig
   export BR_ROOTFS_DIR="$OUTPUT_DIR"/tmp-rootfs
   export BR_MV_VENDOR_DIR=${BR_DIR}/board/${MV_VENDOR}
+  export BR_BOARD_TYPE=${MV_BOARD_TYPE}
 
   # Check if bootlogo is enabled in the u-boot defconfig
   UBOOT_DEFCONFIG="${BUILD_PATH}/boards/${CHIP_ARCH,,}/${PROJECT_FULLNAME}/u-boot/${BRAND}_${PROJECT_FULLNAME}_defconfig"
@@ -890,6 +907,7 @@ cvi_print_env()
   echo -e "  PROJECT: \e[34m$PROJECT_FULLNAME\e[0m, DDR_CFG=\e[34m$DDR_CFG\e[0m"
   echo -e "  CHIP_ARCH: \e[34m$CHIP_ARCH\e[0m, DEBUG=\e[34m$DEBUG\e[0m"
   echo -e "  SDK VERSION: \e[34m$SDK_VER\e[0m, RPC=\e[34m$MULTI_PROCESS_SUPPORT\e[0m"
+  echo -e "  BOARD TYPE: \e[34m$BR_BOARD_TYPE\e[0m"
   echo -e "  ATF options: ATF_KEY_SEL=\e[34m$ATF_KEY_SEL\e[0m, BL32=\e[34m$ATF_BL32\e[0m"
   echo -e "  Linux source folder:\e[34m$KERNEL_SRC\e[0m, Uboot source folder: \e[34m$UBOOT_SRC\e[0m"
   echo -e "  CROSS_COMPILE_PREFIX: \e[34m$CROSS_COMPILE\e[0m"

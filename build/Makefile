@@ -230,18 +230,18 @@ endef
 
 ifeq ($(CHIP_ARCH),$(filter $(CHIP_ARCH),CV181X CV180X ATHENA2))
 define copy_header_action
-	${Q}cp -r ${OSDRV_PATH}/interdrv/${MW_VER}/include/chip/$(shell echo $(CHIP_ARCH) | tr A-Z a-z)/uapi/linux/* ${1}/linux/
-	${Q}cp -r ${OSDRV_PATH}/interdrv/${MW_VER}/include/common/uapi/linux/* ${1}/linux/
+	${Q}cp -r ${OSDRV_PATH}/interdrv/include/chip/$(shell echo $(CHIP_ARCH) | tr A-Z a-z)/uapi/linux/* ${1}/linux/
+	${Q}cp -r ${OSDRV_PATH}/interdrv/include/common/uapi/linux/* ${1}/linux/
 	${Q}cp ${KERNEL_PATH}/drivers/staging/android/uapi/ion.h ${1}/linux/
 	${Q}cp ${KERNEL_PATH}/drivers/staging/android/uapi/ion_cvitek.h ${1}/linux/
 	${Q}cp ${KERNEL_PATH}/include/uapi/linux/dma-buf.h ${1}/linux/
 endef
 else
 define copy_header_action
-	${Q}cp -r ${OSDRV_PATH}/interdrv/${MW_VER}/vip/chip/$(shell echo $(CHIP_ARCH) | tr A-Z a-z)/uapi/* ${1}/linux/
-	${Q}cp -r ${OSDRV_PATH}/interdrv/${MW_VER}/base/uapi/* ${1}/linux/
-	${Q}cp -r ${OSDRV_PATH}/interdrv/${MW_VER}/include/uapi/* ${1}/linux/
-	${Q}cp ${OSDRV_PATH}/interdrv/${MW_VER}/usb/gadget/function/f_cvg.h ${1}/linux/
+	${Q}cp -r ${OSDRV_PATH}/interdrv/vip/chip/$(shell echo $(CHIP_ARCH) | tr A-Z a-z)/uapi/* ${1}/linux/
+	${Q}cp -r ${OSDRV_PATH}/interdrv/base/uapi/* ${1}/linux/
+	${Q}cp -r ${OSDRV_PATH}/interdrv/include/uapi/* ${1}/linux/
+	${Q}cp ${OSDRV_PATH}/interdrv/usb/gadget/function/f_cvg.h ${1}/linux/
 	${Q}cp ${KERNEL_PATH}/drivers/staging/android/uapi/ion.h ${1}/linux/
 	${Q}cp ${KERNEL_PATH}/drivers/staging/android/uapi/ion_cvitek.h ${1}/linux/
 	${Q}cp ${KERNEL_PATH}/include/uapi/linux/dma-buf.h ${1}/linux/
@@ -289,6 +289,10 @@ kernel-setconfig: ${KERNEL_OUTPUT_CONFIG_PATH}
 kernel-build: ${KERNEL_OUTPUT_CONFIG_PATH}
 	$(call print_target)
 	${Q}echo LOCALVERSION=${LOCALVERSION}
+ifneq (${CONFIG_KERNEL_SUSPEND},y)
+	${Q}$(MAKE) -j${NPROC} -C ${KERNEL_PATH} O=${KERNEL_PATH}/${KERNEL_OUTPUT_FOLDER} setconfig 'SCRIPT_ARG="SUSPEND=n"'
+	${Q}$(MAKE) -j${NPROC} -C ${KERNEL_PATH} O=${KERNEL_PATH}/${KERNEL_OUTPUT_FOLDER} savedefconfig
+endif
 	${Q}$(MAKE) -j${NPROC} -C ${KERNEL_PATH} O=${KERNEL_PATH}/${KERNEL_OUTPUT_FOLDER} olddefconfig
 	${Q}$(MAKE) -j${NPROC} -C ${KERNEL_PATH}/${KERNEL_OUTPUT_FOLDER} Image modules
 	${Q}$(MAKE) -j${NPROC} -C ${KERNEL_PATH}/${KERNEL_OUTPUT_FOLDER} modules_install headers_install INSTALL_HDR_PATH=${KERNEL_PATH}/${KERNEL_OUTPUT_FOLDER}/$(ARCH)/usr
@@ -326,6 +330,7 @@ ifeq ($(patsubst "%",%,$(CONFIG_ARCH)),arm64)
 	# Since we will support aarch32 user space even if the kernel is aarch64, install aarch32 headers also
 	$(call copy_header_action, ${KERNEL_PATH}/${KERNEL_OUTPUT_FOLDER}/arm/usr/include)
 endif
+	${Q}rm -rf ${KERNEL_PATH}/build/kernel_output
 	${Q}ln -sf ${KERNEL_PATH}/${KERNEL_OUTPUT_FOLDER}  ${KERNEL_PATH}/build/kernel_output
 
 ifeq ($(CONFIG_TOOLCHAIN_GLIBC_ARM64),y)
@@ -558,9 +563,14 @@ endif
 ifneq ($(wildcard $(TOP_DIR)/device/generic/rootfs_overlay/$(SDK_VER)),)
 	${Q}cp -arf $(TOP_DIR)/device/generic/rootfs_overlay/$(SDK_VER)/* $(BR_ROOTFS_DIR)/
 endif
+ifneq ($(wildcard $(TOP_DIR)/device/generic/rootfs_overlay/$(BR_BOARD_TYPE)),)
+	${Q}cp -arf $(TOP_DIR)/device/generic/rootfs_overlay/$(BR_BOARD_TYPE)/* $(BR_ROOTFS_DIR)/
+endif
 
 	# copy milkv board overlay files
+ifneq ($(wildcard $(TOP_DIR)/device/$(MV_BOARD)/overlay),)
 	${Q}cp -arf $(TOP_DIR)/device/$(MV_BOARD)/overlay/* $(BR_ROOTFS_DIR)/
+endif
 
 	# clean this directory for multiple targets
 	${Q}rm -rf $(BR_OVERLAY_DIR)

@@ -181,13 +181,6 @@ config CROSS_COMPILE_SDK
 	  Cross compile toolchain prefix for middleware.
 	  This will modify by TOOLCHAN_XLIBC
 
-config MW_VER
-	string
-	default "v1" if CHIP_ARCH_cv183x || CHIP_ARCH_cv182x
-	default "v2" if CHIP_ARCH_cv181x || CHIP_ARCH_cv180x
-	help
-	  Set middleware version.
-
 config SDK_VER
 	string
 	default "64bit" if TOOLCHAIN_GLIBC_ARM64
@@ -240,7 +233,6 @@ config FLASH_SIZE_SHRINK
 
 config CP_EXT_WIRELESS
 	bool "Install the osdrv/extdrv/wireless/*.ko"
-	depends on FLASH_SIZE_SHRINK
 	default n
 	help
       Install the osdrv/extdrv/wireless/*.ko no matter
@@ -248,12 +240,10 @@ config CP_EXT_WIRELESS
 
 config NO_FB
 	bool "Do not compile frame buffer drivers"
-	depends on FLASH_SIZE_SHRINK
 	default n
 
 config NO_TP
 	bool "Select CONFIG_NO_TP to build osdrv without Touchscreen driver(extdrv/tp)"
-	depends on FLASH_SIZE_SHRINK
 	default n
 	help
 	  TP: Touchscreen driver(extdrv/tp)
@@ -482,6 +472,12 @@ config KERNEL_COMPRESS
 	default "none" if KERNEL_UNCOMPRESSED
 	help
 	  Set kernel source code.
+
+config KERNEL_SUSPEND
+	bool "Enable RISCV Kernel Suspend"
+	default n
+	help
+	  Enable kernel power management to support STR
 endmenu
 
 menu "ROOTFS options"
@@ -532,6 +528,20 @@ config BUILD_TURNKEY_IPC
 endmenu
 
 menu "RTOS options"
+
+config ENABLE_BOOT0
+	bool "Enable BOOT0"
+	depends on CHIP_ARCH_cv181x || CHIP_ARCH_cv180x
+	default n
+	help
+	  Enable boot0.
+
+config ENABLE_FASTBOOT0
+	bool "Enable FASTBOOT0"
+	depends on ENABLE_BOOT0
+	default n
+	help
+	  Enable fastboot0.
 
 config ENABLE_FREERTOS
 	bool "Enable FREERTOS"
@@ -609,6 +619,6 @@ config ALIOS_SOLUTION
 
 endmenu
 
-menu "Rootfs packages"
-osource "../ramdisk/rootfs/public/Kconfig"
-endmenu
+#menu "Rootfs packages"
+#osource "../ramdisk/rootfs/public/Kconfig"
+#endmenu
